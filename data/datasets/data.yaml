@@ -2,7 +2,8 @@
 # 基于YOLOv8的垃圾目标检测算法 - 家庭厨房场景专用
 
 # 数据集路径配置
-path: data/datasets
+# path: . 表示相对于此yaml文件所在目录
+path: .
 train: images/train
 val: images/val
 
