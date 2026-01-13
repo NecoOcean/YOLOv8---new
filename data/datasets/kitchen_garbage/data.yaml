@@ -1,0 +1,15 @@
+# 厨房垃圾分类数据集配置
+# 基于现有数据集整理
+
+path: data/datasets/kitchen_garbage
+train: images/train
+val: images/val
+
+nc: 5
+
+names:
+  0: fruit_peel  # 果皮
+  1: tea_leaves  # 茶叶渣
+  2: zip_top_can  # 易拉罐
+  3: expired_medicine  # 过期药品
+  4: other_garbage  # 其他垃圾

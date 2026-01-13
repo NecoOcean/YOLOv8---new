@@ -1,0 +1,101 @@
+/* 垃圾目标检测系统样式表 */
+
+/* 主窗口 */
+QMainWindow {
+    background-color: #f5f5f5;
+}
+
+/* 按钮样式 */
+QPushButton {
+    background-color: #2196F3;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-size: 14px;
+    min-width: 80px;
+}
+
+QPushButton:hover {
+    background-color: #1976D2;
+}
+
+QPushButton:pressed {
+    background-color: #0D47A1;
+}
+
+QPushButton:disabled {
+    background-color: #BDBDBD;
+}
+
+/* 表格样式 */
+QTableWidget {
+    background-color: white;
+    border: 1px solid #E0E0E0;
+    border-radius: 4px;
+    gridline-color: #E0E0E0;
+}
+
+QTableWidget::item {
+    padding: 8px;
+}
+
+QTableWidget::item:selected {
+    background-color: #E3F2FD;
+    color: #1976D2;
+}
+
+QHeaderView::section {
+    background-color: #FAFAFA;
+    padding: 8px;
+    border: none;
+    border-bottom: 2px solid #2196F3;
+    font-weight: bold;
+}
+
+/* 标签样式 */
+QLabel {
+    color: #424242;
+    font-size: 14px;
+}
+
+/* 图像显示区域 */
+QLabel#imageLabel {
+    background-color: #ECEFF1;
+    border: 2px dashed #90A4AE;
+    border-radius: 8px;
+}
+
+/* 分组框 */
+QGroupBox {
+    border: 1px solid #E0E0E0;
+    border-radius: 4px;
+    margin-top: 12px;
+    padding-top: 12px;
+    background-color: white;
+}
+
+QGroupBox::title {
+    subcontrol-origin: margin;
+    left: 10px;
+    padding: 0 5px;
+    color: #1976D2;
+    font-weight: bold;
+}
+
+/* 滚动条 */
+QScrollBar:vertical {
+    background-color: #F5F5F5;
+    width: 10px;
+    border-radius: 5px;
+}
+
+QScrollBar::handle:vertical {
+    background-color: #BDBDBD;
+    border-radius: 5px;
+    min-height: 20px;
+}
+
+QScrollBar::handle:vertical:hover {
+    background-color: #9E9E9E;
+}

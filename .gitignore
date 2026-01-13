@@ -1,0 +1,268 @@
+# =============================================================================
+# 基于YOLOv8的垃圾目标检测系统 - Git忽略规则
+# 项目: YOLOv8-GarbageDetection
+# 更新日期: 2026-01-13
+# =============================================================================
+
+# =============================================================================
+# Python 运行时文件
+# =============================================================================
+# 字节码缓存
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# 解释器
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# 虚拟环境
+.env
+.venv/
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.conda/
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# pytest
+.pytest_cache/
+.coverage
+htmlcov/
+
+# mypy
+.mypy_cache/
+
+# =============================================================================
+# 深度学习 / PyTorch / YOLO
+# =============================================================================
+# 模型权重文件（体积大，使用云盘存储）
+*.pt
+*.pth
+*.onnx
+*.engine
+*.trt
+*.pb
+*.h5
+*.keras
+*.caffemodel
+*.weights
+
+# 训练输出目录
+runs/
+training/runs/
+wandb/
+mlruns/
+lightning_logs/
+
+# TensorBoard日志
+events.out.tfevents.*
+
+# 模型导出
+exports/
+
+# =============================================================================
+# 数据集（使用阿里云盘存储，不纳入Git）
+# =============================================================================
+# 图片数据
+data/datasets/images/
+data/datasets/labels/
+datasets/images/
+datasets/labels/
+*.jpg
+*.jpeg
+*.png
+*.bmp
+*.gif
+*.tiff
+*.webp
+
+# 但保留示例图片目录
+!TestFiles/
+
+# 标签文件（批量）
+*.txt
+# 但保留配置文件
+!requirements.txt
+!*.yaml
+!*.yml
+
+# 压缩包
+*.tar
+*.tar.gz
+*.tgz
+*.zip
+*.rar
+*.7z
+
+# 视频文件
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.wmv
+*.flv
+
+# =============================================================================
+# IDE / 编辑器
+# =============================================================================
+# JetBrains (PyCharm)
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Visual Studio Code
+.vscode/
+*.code-workspace
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*~
+.netrwhist
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+
+# Spyder
+.spyderproject
+.spyproject
+
+# =============================================================================
+# 系统文件
+# =============================================================================
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+*.tmp
+*.temp
+*.bak
+
+# Linux
+*~
+.fuse_hidden*
+.Trash-*
+
+# =============================================================================
+# 项目输出和临时文件
+# =============================================================================
+# 检测结果输出
+output/
+save_data/
+detections/
+
+# 日志文件
+*.log
+logs/
+*.log.*
+
+# 统计数据
+statistics/
+*.csv
+# 但保留示例或模板CSV
+!templates/*.csv
+
+# 缓存
+.cache/
+*.cache
+
+# =============================================================================
+# 项目特定文件
+# =============================================================================
+# Ask-Continue插件
+.ask_continue_port
+
+# Windsurf IDE
+.windsurf/
+.windsurfrules
+
+# 本地配置（包含敏感信息）
+config.local.py
+config.local.yaml
+secrets.yaml
+.secrets/
+
+# 旧版/备份文件
+*.bak
+*.old
+*_backup*
+*_old*
+
+# 测试输出
+test_output/
+test_results/
+
+# 临时脚本
+temp_*.py
+test_*.py
+# 但保留正式测试
+!tests/test_*.py
+
+# =============================================================================
+# 文档构建输出
+# =============================================================================
+docs/_build/
+site/
+*.pdf
+# 但保留项目文档PDF
+!docs/*.pdf
+
+# =============================================================================
+# 保留空目录的占位文件
+# =============================================================================
+# 允许提交 .gitkeep 文件以保留空目录结构
+!.gitkeep
+!**/.gitkeep
+
+# =============================================================================
+# 特殊保留规则（覆盖上面的忽略规则）
+# =============================================================================
+# 保留数据集配置文件
+!data/datasets/*.yaml
+!data/datasets/**/*.yaml
+!datasets/*.yaml
+!datasets/**/*.yaml
+
+# 保留模型目录结构
+!data/models/.gitkeep
+!data/models/**/.gitkeep
+
+# 保留测试用的小型数据
+!TestFiles/
+!tests/fixtures/
