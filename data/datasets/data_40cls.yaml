@@ -2,8 +2,8 @@
 # 基于YOLOv8的垃圾目标检测算法 - 精细化识别版本
 # 注意：此配置基于原始数据集的40个类别
 
-# path: . 表示相对于此yaml文件所在目录
-path: .
+# path: 相对于项目根目录或使用绝对路径
+path: data/datasets
 train: images/train
 val: images/val
 
