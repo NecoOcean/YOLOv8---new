@@ -268,10 +268,21 @@ def real_world_test(model, test_dir, conf_threshold=0.25):
         print(f"⚠️ 未找到测试图片: {test_dir}")
         return None
     
-    print(f"测试图片数: {len(test_images)}")
+    # 限制测试图片数量以避免内存问题
+    max_test_images = min(500, len(test_images))
+    test_images = test_images[:max_test_images]
+    
+    print(f"测试图片数: {len(test_images)} (最多500张)")
     print(f"置信度阈值: {conf_threshold}")
     
-    results = model.predict([str(p) for p in test_images], conf=conf_threshold, verbose=False)
+    # 使用流式处理避免内存溢出，逐张处理
+    results = []
+    for i, img_path in enumerate(test_images):
+        if (i + 1) % 100 == 0:
+            print(f"  处理进度: {i+1}/{len(test_images)}")
+        result = model.predict(str(img_path), conf=conf_threshold, verbose=False)
+        if result:
+            results.extend(result)
     
     # 统计
     total_images = len(results)
