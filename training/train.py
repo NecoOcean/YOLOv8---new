@@ -64,9 +64,9 @@ def train_model(mode: str = 'cls5', epochs: int = 100, batch: int = 16,
         project=str(PROJECT_ROOT / 'training' / 'runs' / 'detect'),
         name=project_name,
         
-        # ========== 优化的学习率策略 ==========
+        # ========== 优化的学习率策略 (基于lr_finder结果) ==========
         optimizer='AdamW',      # 比 Adam 更稳定
-        lr0=0.001,              # 初始学习率
+        lr0=0.0005,             # 初始学习率 (基于lr_finder推荐，折中值)
         lrf=0.01,               # 最终学习率比例
         cos_lr=True,            # 余弦退火
         warmup_epochs=5,        # 预热轮次
@@ -140,7 +140,7 @@ def main():
     print("\n" + "=" * 60)
     print("数据增强策略已优化:")
     print("=" * 60)
-    print("✅ 学习率: AdamW + 余弦退火 + 预热")
+    print("✅ 学习率: AdamW + lr0=0.0005 + 余弦退火 + 预热")
     print("✅ 几何增强: 旋转15° + 平移20% + 剪切 + 透视")
     print("✅ 翻转: 水平50% + 垂直50%")
     print("✅ 高级增强: Mosaic + MixUp(30%) + Copy-Paste(30%)")
