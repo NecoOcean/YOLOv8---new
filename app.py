@@ -102,6 +102,9 @@ class MainWindow(QMainWindow):
         
         # 更新统计显示
         self._update_statistics_display()
+        
+        # 初始化配置菜单状态
+        self._update_config_menu_state()
     
     def _init_components(self):
         """初始化核心组件"""
@@ -138,6 +141,12 @@ class MainWindow(QMainWindow):
             self.ui.exportBtn.clicked.connect(self.on_export_statistics)
         if hasattr(self.ui, 'clearBtn'):
             self.ui.clearBtn.clicked.connect(self.on_clear_statistics)
+        
+        # 配置切换菜单
+        if hasattr(self.ui, 'actionConfig5'):
+            self.ui.actionConfig5.triggered.connect(lambda: self.on_switch_config('cls5'))
+            self.ui.actionConfig23.triggered.connect(lambda: self.on_switch_config('cls23'))
+            self.ui.actionConfig40.triggered.connect(lambda: self.on_switch_config('cls40'))
     
     def on_open_image(self):
         """打开图片"""
@@ -325,6 +334,81 @@ class MainWindow(QMainWindow):
         """关闭事件"""
         self.on_stop()
         event.accept()
+    
+    def _update_config_menu_state(self):
+        """更新配置菜单选中状态"""
+        if not hasattr(self.ui, 'actionConfig5'):
+            return
+        
+        current_mode = settings.CURRENT_MODE
+        self.ui.actionConfig5.setChecked(current_mode == 'cls5')
+        self.ui.actionConfig23.setChecked(current_mode == 'cls23')
+        self.ui.actionConfig40.setChecked(current_mode == 'cls40')
+        
+        # 更新窗口标题显示当前配置
+        config = settings.get_current_config()
+        self.setWindowTitle(f"基于YOLOv8的垃圾目标检测系统 - {config['NUM_CLASSES']}类")
+    
+    def on_switch_config(self, mode: str):
+        """切换配置模式"""
+        # 停止当前视频/摄像头
+        self.on_stop()
+        
+        # 获取配置信息
+        config_names = {
+            'cls5': ('5类配置', settings.MODEL_5CLS_PATH),
+            'cls23': ('23类配置', settings.MODEL_23CLS_PATH),
+            'cls40': ('40类配置', settings.MODEL_40CLS_PATH),
+        }
+        config_name, model_path = config_names.get(mode, ('未知', None))
+        
+        # 检查模型是否存在
+        if model_path and not Path(model_path).exists():
+            reply = QMessageBox.warning(
+                self, "模型不存在",
+                f"未找到 {config_name} 的模型文件:\n{model_path}\n\n"
+                "是否仍然切换配置？（将使用默认模型）",
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.No
+            )
+            if reply == QMessageBox.No:
+                self._update_config_menu_state()
+                return
+        
+        # 切换配置
+        settings.set_mode(mode)
+        
+        # 重新加载模型
+        try:
+            model_path_str = str(settings.CURRENT_MODEL_PATH)
+            if Path(model_path_str).exists():
+                self.detection_service = DetectionService(model_path_str)
+                self.ui_manager.set_status(
+                    self.ui.statusLabel,
+                    f"已切换到 {config_name}，模型加载成功"
+                )
+            else:
+                # 模型不存在，仅切换配置
+                self.detection_service = None
+                self.ui_manager.set_status(
+                    self.ui.statusLabel,
+                    f"已切换到 {config_name}，等待模型文件"
+                )
+        except Exception as e:
+            QMessageBox.critical(self, "错误", f"模型加载失败: {e}")
+            self.detection_service = None
+        
+        # 更新菜单状态
+        self._update_config_menu_state()
+        
+        # 提示用户
+        config = settings.get_current_config()
+        QMessageBox.information(
+            self, "配置已切换",
+            f"已切换到 {config_name}\n"
+            f"类别数量: {config['NUM_CLASSES']}\n"
+            f"模型路径: {config['model_path']}"
+        )
 
 
 def main():

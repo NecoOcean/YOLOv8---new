@@ -192,6 +192,7 @@ class Ui_MainWindow(object):
         self.menubar.setGeometry(QtCore.QRect(0, 0, 1200, 25))
         
         self.menuFile = QtWidgets.QMenu("文件", self.menubar)
+        self.menuConfig = QtWidgets.QMenu("配置", self.menubar)
         self.menuHelp = QtWidgets.QMenu("帮助", self.menubar)
         
         MainWindow.setMenuBar(self.menubar)
@@ -200,19 +201,43 @@ class Ui_MainWindow(object):
         self.statusbar = QtWidgets.QStatusBar(MainWindow)
         MainWindow.setStatusBar(self.statusbar)
         
-        # 菜单动作
+        # 菜单动作 - 文件
         self.actionOpen = QtWidgets.QAction("打开图片", MainWindow)
         self.actionOpen.setShortcut("Ctrl+O")
         self.actionExit = QtWidgets.QAction("退出", MainWindow)
         self.actionExit.setShortcut("Ctrl+Q")
+        
+        # 菜单动作 - 配置切换
+        self.actionConfig5 = QtWidgets.QAction("5类配置 (简化版)", MainWindow)
+        self.actionConfig5.setCheckable(True)
+        self.actionConfig23 = QtWidgets.QAction("23类配置 (标准版)", MainWindow)
+        self.actionConfig23.setCheckable(True)
+        self.actionConfig40 = QtWidgets.QAction("40类配置 (精细版)", MainWindow)
+        self.actionConfig40.setCheckable(True)
+        
+        # 配置互斥组
+        self.configActionGroup = QtWidgets.QActionGroup(MainWindow)
+        self.configActionGroup.addAction(self.actionConfig5)
+        self.configActionGroup.addAction(self.actionConfig23)
+        self.configActionGroup.addAction(self.actionConfig40)
+        self.configActionGroup.setExclusive(True)
+        
+        # 菜单动作 - 帮助
         self.actionAbout = QtWidgets.QAction("关于", MainWindow)
         
+        # 组装菜单
         self.menuFile.addAction(self.actionOpen)
         self.menuFile.addSeparator()
         self.menuFile.addAction(self.actionExit)
+        
+        self.menuConfig.addAction(self.actionConfig5)
+        self.menuConfig.addAction(self.actionConfig23)
+        self.menuConfig.addAction(self.actionConfig40)
+        
         self.menuHelp.addAction(self.actionAbout)
         
         self.menubar.addAction(self.menuFile.menuAction())
+        self.menubar.addAction(self.menuConfig.menuAction())
         self.menubar.addAction(self.menuHelp.menuAction())
         
         # 设置按钮样式
