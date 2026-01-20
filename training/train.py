@@ -2,12 +2,13 @@
 # -*- coding: utf-8 -*-
 """
 基于YOLOv8的垃圾目标检测系统 - 统一训练入口
-支持5类和40类模型训练
+支持 5类、23类、40类 模型训练（默认23类）
 """
 import argparse
 import os
 import sys
 from pathlib import Path
+from datetime import datetime
 
 # 添加项目根目录到路径
 PROJECT_ROOT = Path(__file__).parent.parent
@@ -17,29 +18,54 @@ from ultralytics import YOLO
 
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
+# 训练配置
+TRAIN_CONFIGS = {
+    'cls5': {
+        'data_yaml': 'data/datasets/kitchen_garbage/data.yaml',
+        'base_model': 'yolov8n.pt',
+        'name_prefix': 'kitchen_garbage_5cls',
+        'description': '5类简化版垃圾分类',
+    },
+    'cls23': {
+        'data_yaml': 'data/datasets/kitchen_garbage_merged/data.yaml',
+        'base_model': 'yolov8n.pt',
+        'name_prefix': 'kitchen_garbage_23cls',
+        'description': '23类厨房垃圾分类（标准版）',
+    },
+    'cls40': {
+        'data_yaml': 'data/datasets/data_40cls.yaml',
+        'base_model': 'yolov8s.pt',
+        'name_prefix': 'garbage_40cls',
+        'description': '40类精细化垃圾分类',
+    },
+}
 
-def train_model(mode: str = 'cls5', epochs: int = 100, batch: int = 16, 
+
+def train_model(mode: str = 'cls23', epochs: int = 100, batch: int = 16, 
                 device: str = '0', resume: bool = False):
     """
     训练模型
     
     Args:
-        mode: 训练模式 'cls5' 或 'cls40'
+        mode: 训练模式 'cls5', 'cls23' 或 'cls40'（默认cls23）
         epochs: 训练轮次
         batch: 批次大小
         device: 设备 '0' GPU或 'cpu'
         resume: 是否继续训练
     """
     
-    # 配置
-    if mode == 'cls40':
-        data_yaml = str(PROJECT_ROOT / 'data' / 'datasets' / 'data_40cls.yaml')
-        project_name = 'garbage_40cls'
-        base_model = 'yolov8s.pt'
-    else:
-        data_yaml = str(PROJECT_ROOT / 'data' / 'datasets' / 'kitchen_garbage' / 'data.yaml')
-        project_name = 'kitchen_garbage_5cls'
-        base_model = 'yolov8n.pt'
+    # 获取配置
+    if mode not in TRAIN_CONFIGS:
+        print(f"错误: 未知模式 '{mode}'，可用模式: {list(TRAIN_CONFIGS.keys())}")
+        return
+    
+    config = TRAIN_CONFIGS[mode]
+    data_yaml = str(PROJECT_ROOT / config['data_yaml'])
+    base_model = config['base_model']
+    
+    # 生成时间戳命名
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    project_name = f"{config['name_prefix']}_{timestamp}"
     
     print(f"\n{'='*50}")
     print(f"训练模式: {mode.upper()}")
@@ -61,7 +87,7 @@ def train_model(mode: str = 'cls5', epochs: int = 100, batch: int = 16,
         batch=batch,
         device=device,
         resume=resume,
-        project=str(PROJECT_ROOT / 'training' / 'runs' / 'detect'),
+        project=str(PROJECT_ROOT / 'training' / 'runs'),
         name=project_name,
         
         # ========== 优化的学习率策略 (基于lr_finder结果) ==========
@@ -115,36 +141,50 @@ def train_model(mode: str = 'cls5', epochs: int = 100, batch: int = 16,
     print(f"mAP50-95: {metrics.box.map:.4f}")
     
     # 输出路径
-    output_dir = PROJECT_ROOT / 'training' / 'runs' / 'detect' / project_name
+    output_dir = PROJECT_ROOT / 'training' / 'runs' / project_name
     print(f"\n训练完成！")
     print(f"最佳模型保存在: {output_dir / 'weights' / 'best.pt'}")
-    print(f"\n请执行以下命令复制模型到data/models/trained目录:")
     
-    if mode == 'cls40':
-        print(f"copy \"{output_dir / 'weights' / 'best.pt'}\" \"{PROJECT_ROOT / 'data' / 'models' / 'trained' / 'best_40cls.pt'}\"")
+    # 自动复制模型到 models 目录
+    model_dst_name = {
+        'cls5': 'best_5cls.pt',
+        'cls23': 'best_23cls.pt',
+        'cls40': 'best_40cls.pt',
+    }.get(mode, 'best.pt')
+    
+    best_model_src = output_dir / 'weights' / 'best.pt'
+    best_model_dst = PROJECT_ROOT / 'data' / 'models' / 'trained' / model_dst_name
+    
+    if best_model_src.exists():
+        import shutil
+        best_model_dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy(best_model_src, best_model_dst)
+        print(f"已自动复制模型到: {best_model_dst}")
     else:
-        print(f"copy \"{output_dir / 'weights' / 'best.pt'}\" \"{PROJECT_ROOT / 'data' / 'models' / 'trained' / 'best_5cls.pt'}\"")
+        print(f"\n请执行以下命令复制模型:")
+        print(f"copy \"{best_model_src}\" \"{best_model_dst}\"")
 
 
 def main():
-    parser = argparse.ArgumentParser(description='垃圾检测模型训练 (优化版)')
-    parser.add_argument('--mode', type=str, default='cls5', choices=['cls5', 'cls40'],
-                        help='训练模式: cls5(5类) 或 cls40(40类)')
-    parser.add_argument('--epochs', type=int, default=300, help='训练轮次 (默认300)')
+    parser = argparse.ArgumentParser(description='垃圾检测模型训练 - 统一入口')
+    parser.add_argument('--mode', type=str, default='cls23', 
+                        choices=['cls5', 'cls23', 'cls40'],
+                        help='训练模式: cls5(5类), cls23(23类,默认), cls40(40类)')
+    parser.add_argument('--epochs', type=int, default=100, help='训练轮次 (默认100)')
     parser.add_argument('--batch', type=int, default=64, help='批次大小 (默认64)')
     parser.add_argument('--device', type=str, default='0', help='设备: 0/1/cpu')
     parser.add_argument('--resume', action='store_true', help='继续训练')
     
     args = parser.parse_args()
     
+    # 显示可用配置
     print("\n" + "=" * 60)
-    print("数据增强策略已优化:")
+    print("垃圾检测模型训练 - 统一入口")
     print("=" * 60)
-    print("✅ 学习率: AdamW + lr0=0.0005 + 余弦退火 + 预热")
-    print("✅ 几何增强: 旋转15° + 平移20% + 剪切 + 透视")
-    print("✅ 翻转: 水平50% + 垂直50%")
-    print("✅ 高级增强: Mosaic + MixUp(30%) + Copy-Paste(30%)")
-    print("✅ 其他: 随机擦除(40%)")
+    print("可用训练模式:")
+    for mode_key, mode_config in TRAIN_CONFIGS.items():
+        marker = " (默认)" if mode_key == 'cls23' else ""
+        print(f"  --mode {mode_key}: {mode_config['description']}{marker}")
     print("=" * 60)
     
     train_model(
