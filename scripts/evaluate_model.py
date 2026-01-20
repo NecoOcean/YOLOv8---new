@@ -13,7 +13,7 @@ YOLOv8 模型评估脚本
 
 使用方法：
     python scripts/evaluate_model.py
-    python scripts/evaluate_model.py --model path/to/model.pt --data path/to/data.yaml
+    python scripts/evaluate_model.py --model path/to/model.pt --data path/to/data_29cls.yaml
 """
 
 import os

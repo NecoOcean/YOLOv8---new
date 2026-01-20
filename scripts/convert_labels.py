@@ -150,7 +150,7 @@ def main():
     print("\n下一步操作:")
     print("1. 检查转换结果是否正确")
     print("2. 如果正确，将 labels_converted 重命名为 labels")
-    print("3. 更新 data.yaml 中的 nc 为 29")
+    print("3. 更新 data_29cls.yaml 中的 nc 为 29")
     print("4. 运行训练: python train.py")
 
 if __name__ == '__main__':
