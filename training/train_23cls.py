@@ -9,6 +9,7 @@ from ultralytics import YOLO
 from pathlib import Path
 import yaml
 import torch
+from datetime import datetime
 
 
 def train_23cls():
@@ -51,6 +52,10 @@ def train_23cls():
         print(f"加载预训练模型: {model_path}")
         model = YOLO(str(model_path))
     
+    # 生成时间戳用于区分每次训练
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    run_name = f"kitchen_garbage_23cls_{timestamp}"
+    
     # 训练参数（针对大数据集优化）
     train_args = {
         "data": str(data_yaml),
@@ -60,8 +65,8 @@ def train_23cls():
         "patience": 15,  # 早停（大数据集可适当减少）
         "device": device,
         "workers": 8,  # Windows 上可能需要设为 0
-        "project": str(project_root / "runs/detect"),
-        "name": "kitchen_garbage_23cls",
+        "project": str(project_root / "training/runs"),
+        "name": run_name,
         "exist_ok": True,
         "pretrained": True,
         "optimizer": "AdamW",
@@ -95,8 +100,8 @@ def train_23cls():
     print("训练完成!")
     print("="*60)
     
-    best_model = project_root / "runs/detect/kitchen_garbage_23cls/weights/best.pt"
-    last_model = project_root / "runs/detect/kitchen_garbage_23cls/weights/last.pt"
+    best_model = project_root / f"training/runs/{run_name}/weights/best.pt"
+    last_model = project_root / f"training/runs/{run_name}/weights/last.pt"
     
     print(f"最佳模型: {best_model}")
     print(f"最终模型: {last_model}")
@@ -126,7 +131,7 @@ def train_with_resume(checkpoint_path: str = None):
     project_root = Path(__file__).parent.parent
     
     if checkpoint_path is None:
-        checkpoint_path = project_root / "runs/detect/kitchen_garbage_23cls/weights/last.pt"
+        checkpoint_path = project_root / "training/runs/kitchen_garbage_23cls/weights/last.pt"
     
     if not Path(checkpoint_path).exists():
         print(f"错误: 检查点不存在: {checkpoint_path}")

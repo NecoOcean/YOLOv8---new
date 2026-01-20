@@ -4,9 +4,14 @@
 基于YOLOv8的垃圾目标检测算法 - 40类精细化模型训练脚本
 """
 from ultralytics import YOLO
+from datetime import datetime
+from pathlib import Path
 import os
 
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
+
+# 项目根目录
+PROJECT_ROOT = Path(__file__).parent.parent
 
 if __name__ == '__main__':
     # 加载预训练模型
@@ -14,6 +19,10 @@ if __name__ == '__main__':
     # yolov8s: 小型，平衡速度和精度（推荐用于实际部署）
     # yolov8m: 中型，精度更高（推荐用于追求更高精度）
     model = YOLO('yolov8s.pt')  # 使用小型模型以获得更好的精度
+    
+    # 生成时间戳用于区分每次训练
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    run_name = f"garbage_40cls_{timestamp}"
     
     # 训练配置 - 40类精细化垃圾分类
     results = model.train(
@@ -26,8 +35,8 @@ if __name__ == '__main__':
         device='0',                           # GPU设备，无GPU使用'cpu'
         patience=30,                          # 早停耐心值（增加以避免过早停止）
         save=True,                            # 保存模型
-        project='runs/detect',                # 输出目录
-        name='garbage_40cls',                 # 实验名称 - 40类精细化分类
+        project=str(PROJECT_ROOT / 'training/runs'),  # 输出目录
+        name=run_name,                        # 实验名称 - 40类精细化分类 + 时间戳
         
         # 数据增强参数（针对垃圾识别优化）
         hsv_h=0.015,                          # 色调增强
@@ -67,7 +76,7 @@ if __name__ == '__main__':
     print("\n" + "="*60)
     print("训练完成！")
     print("="*60)
-    print(f"\n最佳模型保存在: runs/detect/garbage_40cls/weights/best.pt")
+    print(f"\n最佳模型保存在: training/runs/{run_name}/weights/best.pt")
     print("\n下一步操作:")
     print("1. 将 best.pt 复制到 models/ 目录并重命名为 best_40cls.pt")
     print("2. 将 Config_40cls.py 复制为 Config.py（或修改 main.py 导入）")

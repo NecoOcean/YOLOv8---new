@@ -7,6 +7,7 @@
 
 from ultralytics import YOLO
 from pathlib import Path
+from datetime import datetime
 import yaml
 
 
@@ -39,6 +40,10 @@ def train_265cls():
         print(f"加载预训练模型: {model_path}")
         model = YOLO(str(model_path))
     
+    # 生成时间戳用于区分每次训练
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    run_name = f"garbage_265cls_{timestamp}"
+    
     # 训练参数
     train_args = {
         "data": str(data_yaml),
@@ -48,8 +53,8 @@ def train_265cls():
         "patience": 20,  # 早停
         "device": 0,  # GPU
         "workers": 8,
-        "project": str(project_root / "runs/detect"),
-        "name": "garbage_265cls",
+        "project": str(project_root / "training/runs"),
+        "name": run_name,
         "exist_ok": True,
         "pretrained": True,
         "optimizer": "AdamW",
@@ -78,11 +83,11 @@ def train_265cls():
     print("\n" + "="*50)
     print("训练完成!")
     print("="*50)
-    print(f"最佳模型: {project_root}/runs/detect/garbage_265cls/weights/best.pt")
-    print(f"最终模型: {project_root}/runs/detect/garbage_265cls/weights/last.pt")
+    print(f"最佳模型: {project_root}/training/runs/{run_name}/weights/best.pt")
+    print(f"最终模型: {project_root}/training/runs/{run_name}/weights/last.pt")
     
     # 复制最佳模型到 models 目录
-    best_model_src = project_root / "runs/detect/garbage_265cls/weights/best.pt"
+    best_model_src = project_root / f"training/runs/{run_name}/weights/best.pt"
     best_model_dst = project_root / "data/models/trained/best_265cls.pt"
     if best_model_src.exists():
         import shutil

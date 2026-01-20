@@ -9,6 +9,7 @@
 """
 from ultralytics import YOLO
 from pathlib import Path
+from datetime import datetime
 import os
 
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
@@ -56,6 +57,10 @@ if __name__ == '__main__':
     print("\n加载预训练模型...")
     model = YOLO('yolov8s.pt')  # 使用小型模型以获得更好的精度
     
+    # 生成时间戳用于区分每次训练
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    run_name = f"garbage_29cls_{timestamp}"
+    
     # 训练配置 - 29类厨房垃圾分类
     print("\n开始训练...")
     results = model.train(
@@ -68,8 +73,8 @@ if __name__ == '__main__':
         device='0',                           # GPU设备，无GPU使用'cpu'
         patience=25,                          # 早停耐心值
         save=True,                            # 保存模型
-        project='runs/detect',                # 输出目录
-        name='garbage_29cls',                 # 实验名称
+        project=str(PROJECT_ROOT / 'training/runs'),  # 输出目录
+        name=run_name,                        # 实验名称 + 时间戳
         
         # 数据增强参数
         hsv_h=0.015,                          # 色调增强
@@ -97,7 +102,7 @@ if __name__ == '__main__':
     print("\n" + "=" * 60)
     print("训练完成！")
     print("=" * 60)
-    print(f"\n最佳模型保存在: runs/detect/garbage_29cls/weights/best.pt")
+    print(f"\n最佳模型保存在: training/runs/{run_name}/weights/best.pt")
     print("\n下一步操作:")
     print("1. 将 best.pt 复制到 data/models/trained/ 目录并重命名为 best_29cls.pt")
     print("2. 修改 src/config/settings.py 添加29类配置")

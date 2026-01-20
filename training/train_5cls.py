@@ -1,12 +1,17 @@
 # train.py
 # coding:utf-8
 """
-基于YOLOv8的垃圾目标检测算法 - 模型训练脚本
+基于YOLOv8的垃圾目标检测算法 - 模型训练脚本 (5类)
 """
 from ultralytics import YOLO
+from datetime import datetime
+from pathlib import Path
 import os
 
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
+
+# 项目根目录
+PROJECT_ROOT = Path(__file__).parent.parent
 
 if __name__ == '__main__':
     # 加载预训练模型
@@ -14,6 +19,10 @@ if __name__ == '__main__':
     # yolov8s: 小型，平衡速度和精度
     # yolov8m: 中型，精度更高
     model = YOLO('yolov8n.pt')
+    
+    # 生成时间戳用于区分每次训练
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    run_name = f"kitchen_garbage_5cls_{timestamp}"
     
     # 训练配置 - 厨房垃圾分类（5个类别）
     results = model.train(
@@ -26,8 +35,8 @@ if __name__ == '__main__':
         device='0',                              # GPU设备，无GPU使用'cpu'
         patience=20,                             # 早停耐心值
         save=True,                               # 保存模型
-        project='runs/detect',                   # 输出目录
-        name='kitchen_garbage_5cls',             # 实验名称 - 厨房垃圾分类(5类)
+        project=str(PROJECT_ROOT / 'training/runs'),  # 输出目录
+        name=run_name,                           # 实验名称 - 厨房垃圾分类(5类) + 时间戳
         # 数据增强参数
         hsv_h=0.015,                             # 色调增强
         hsv_s=0.7,                               # 饱和度增强
@@ -51,5 +60,5 @@ if __name__ == '__main__':
     # model.export(format='onnx')
     
     print("\n训练完成！")
-    print(f"最佳模型保存在: runs/detect/kitchen_garbage_5cls/weights/best.pt")
+    print(f"最佳模型保存在: training/runs/{run_name}/weights/best.pt")
     print("请将best.pt复制到models目录下使用")
