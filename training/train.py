@@ -10,8 +10,8 @@ import sys
 from pathlib import Path
 from datetime import datetime
 
-# 添加项目根目录到路径
-PROJECT_ROOT = Path(__file__).parent.parent
+# 添加项目根目录到路径（使用 resolve() 确保绝对路径）
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from ultralytics import YOLO
@@ -87,7 +87,7 @@ def train_model(mode: str = 'cls23', epochs: int = 100, batch: int = 16,
         batch=batch,
         device=device,
         resume=resume,
-        project=str(PROJECT_ROOT / 'training' / 'runs'),
+        project=str((PROJECT_ROOT / 'training' / 'runs').resolve()),
         name=project_name,
         
         # ========== 优化的学习率策略 (基于lr_finder结果) ==========
@@ -132,11 +132,18 @@ def train_model(mode: str = 'cls23', epochs: int = 100, batch: int = 16,
         plots=True,
     )
     
-    # 验证
+    # 验证（不保存预测结果到额外目录）
     print("\n" + "="*50)
     print("模型验证结果:")
     print("="*50)
-    metrics = model.val()
+    metrics = model.val(
+        save=False,           # 不保存预测图片
+        save_txt=False,       # 不保存预测标签
+        save_json=False,      # 不保存 JSON
+        project=str((PROJECT_ROOT / 'training' / 'runs').resolve()),  # 验证结果也放在 training/runs
+        name=f"{project_name}_val",
+        exist_ok=True,
+    )
     print(f"mAP50: {metrics.box.map50:.4f}")
     print(f"mAP50-95: {metrics.box.map:.4f}")
     
