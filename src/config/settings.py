@@ -30,12 +30,13 @@ PRETRAINED_MODEL_PATH = MODELS_DIR / 'pretrained' / 'yolov8n.pt'
 MODEL_5CLS_PATH = MODELS_DIR / 'trained' / 'best_5cls.pt'
 MODEL_23CLS_PATH = MODELS_DIR / 'trained' / 'best_23cls.pt'
 MODEL_40CLS_PATH = MODELS_DIR / 'trained' / 'best_40cls.pt'
+MODEL_4CLS_PATH = MODELS_DIR / 'trained' / 'best_4cls.pt'
 
 # 当前使用的模型（默认23类）
 CURRENT_MODEL_PATH = MODEL_23CLS_PATH
 
 # ============ 当前配置模式 ============
-# 'cls5', 'cls23' 或 'cls40'
+# 'cls4', 'cls5', 'cls23' 或 'cls40'
 CURRENT_MODE = 'cls23'
 
 # ============ 5类配置 ============
@@ -58,6 +59,27 @@ CONFIG_5CLS = {
     },
     'model_path': MODEL_5CLS_PATH,
     'data_yaml': DATASETS_DIR / 'kitchen_garbage' / 'data.yaml'
+}
+
+# ============ 4类配置 ============
+CONFIG_4CLS = {
+    'NUM_CLASSES': 4,
+    'names': {
+        0: 'kitchen_waste',
+        1: 'recyclable',
+        2: 'hazardous',
+        3: 'other',
+    },
+    'CH_names': ['厨余垃圾', '可回收物', '有害垃圾', '其他垃圾'],
+    'classification_guide': {
+        0: {'category': '厨余垃圾', 'color': 'green', 'tip': '请投入绿色厨余垃圾桶'},
+        1: {'category': '可回收物', 'color': 'blue', 'tip': '请清洗后投入蓝色可回收垃圾桶'},
+        2: {'category': '有害垃圾', 'color': 'red', 'tip': '请投入红色有害垃圾桶'},
+        3: {'category': '其他垃圾', 'color': 'gray', 'tip': '请投入灰色其他垃圾桶'},
+    },
+    'model_path': MODEL_4CLS_PATH,
+    'data_yaml': DATASETS_DIR / 'kitchen_mixed_stratified' / 'data.yaml',
+    'description': '4类混合垃圾分类模型（kitchen_mixed_stratified 分层抽样版本）',
 }
 
 # ============ 23类配置 ============
@@ -148,16 +170,22 @@ CONFIG_40CLS = {
 }
 
 # ============ 当前配置 ============
+
 def get_current_config():
     """获取当前配置"""
     if CURRENT_MODE == 'cls40':
         return CONFIG_40CLS
     elif CURRENT_MODE == 'cls23':
         return CONFIG_23CLS
-    return CONFIG_5CLS
+    elif CURRENT_MODE == 'cls5':
+        return CONFIG_5CLS
+    elif CURRENT_MODE == 'cls4':
+        return CONFIG_4CLS
+    return CONFIG_23CLS
+
 
 def set_mode(mode: str):
-    """设置配置模式: 'cls5', 'cls23' 或 'cls40'"""
+    """设置配置模式: 'cls4', 'cls5', 'cls23' 或 'cls40'"""
     global CURRENT_MODE, CURRENT_MODEL_PATH
     if mode == 'cls40':
         CURRENT_MODE = 'cls40'
@@ -165,9 +193,16 @@ def set_mode(mode: str):
     elif mode == 'cls23':
         CURRENT_MODE = 'cls23'
         CURRENT_MODEL_PATH = MODEL_23CLS_PATH
-    else:
+    elif mode == 'cls5':
         CURRENT_MODE = 'cls5'
         CURRENT_MODEL_PATH = MODEL_5CLS_PATH
+    elif mode == 'cls4':
+        CURRENT_MODE = 'cls4'
+        CURRENT_MODEL_PATH = MODEL_4CLS_PATH
+    else:
+        # 默认回退到23类配置
+        CURRENT_MODE = 'cls23'
+        CURRENT_MODEL_PATH = MODEL_23CLS_PATH
 
 # 导出当前配置变量（向后兼容）
 _config = get_current_config()

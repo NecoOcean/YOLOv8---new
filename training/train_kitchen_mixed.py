@@ -36,11 +36,11 @@ os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 # ========== 数据集配置 ==========
 DATASET_CONFIG = {
-    'name': 'kitchen_mixed',
-    'data_yaml': 'data/datasets/kitchen_mixed/data.yaml',
+    'name': 'kitchen_mixed_stratified',
+    'data_yaml': 'data/datasets/kitchen_mixed_stratified/data.yaml',
     'classes': ['kitchen_waste', 'recyclable', 'hazardous', 'other'],
     'nc': 4,
-    'description': '混合厨房垃圾数据集（TU Wien + 医疗废物 + TACO）',
+    'description': '混合厨房垃圾数据集（TU Wien + 医疗废物 + TACO，分层抽样版本）',
 }
 
 # ========== 模型配置 ==========
@@ -148,7 +148,7 @@ def get_autodl_optimizations():
 
 def train_kitchen_mixed(
     model_type: str = 'yolov8s',
-    epochs: int = 100,
+    epochs: int = 150,
     batch: int = None,
     imgsz: int = 640,
     device: str = '0',
@@ -207,6 +207,25 @@ def train_kitchen_mixed(
     
     # 数据集路径
     data_yaml = str(PROJECT_ROOT / DATASET_CONFIG['data_yaml'])
+
+    # 校验 data.yaml 中的类别定义是否与配置一致
+    try:
+        with open(data_yaml, "r", encoding="utf-8") as f:
+            yaml_data = yaml.safe_load(f)
+        yaml_nc = yaml_data.get("nc")
+        yaml_names = yaml_data.get("names")
+        if yaml_nc != DATASET_CONFIG['nc']:
+            print(f"[WARN] data.yaml nc={yaml_nc} 与配置 nc={DATASET_CONFIG['nc']} 不一致")
+        loaded_names = None
+        if isinstance(yaml_names, dict):
+            # 按 key 排序，提取名称
+            loaded_names = [yaml_names[i] for i in sorted(yaml_names.keys())]
+        else:
+            loaded_names = yaml_names
+        if loaded_names and list(loaded_names) != DATASET_CONFIG['classes']:
+            print(f"[WARN] data.yaml names={loaded_names} 与配置 classes={DATASET_CONFIG['classes']} 不一致")
+    except Exception as e:
+        print(f"[WARN] 无法读取或解析 data.yaml: {e}")
     
     # 生成实验名称
     if name is None:
@@ -307,15 +326,40 @@ def train_kitchen_mixed(
     print(f"最佳模型: {output_dir / 'weights' / 'best.pt'}")
     print(f"最新模型: {output_dir / 'weights' / 'last.pt'}")
     
-    # 自动复制到 models/trained
+    # 自动复制到 data/models/trained，按数据集命名规范
+    from datetime import datetime
+    import shutil
+
     best_model_src = output_dir / 'weights' / 'best.pt'
-    best_model_dst = PROJECT_ROOT / 'data' / 'models' / 'trained' / 'best_mixed.pt'
-    
+    trained_dir = PROJECT_ROOT / 'data' / 'models' / 'trained'
+    trained_dir.mkdir(parents=True, exist_ok=True)
+
+    today = datetime.now().strftime("%Y%m%d")
+    model_prefix = "best_kitchen_mixed_stratified"
+    suffix = today
+    candidate = trained_dir / f"{model_prefix}_{suffix}.pt"
+    version = 1
+    while candidate.exists():
+        suffix = f"{today}_v{version}"
+        candidate = trained_dir / f"{model_prefix}_{suffix}.pt"
+        version += 1
+
     if best_model_src.exists():
-        import shutil
-        best_model_dst.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy(best_model_src, best_model_dst)
-        print(f"已复制最佳模型到: {best_model_dst}")
+        shutil.copy(best_model_src, candidate)
+        print(f"已复制最佳模型到: {candidate}")
+
+        # 兼容旧路径: 更新 best_mixed.pt 别名（供现有配置/UI 使用）
+        alias_path = trained_dir / 'best_mixed.pt'
+        shutil.copy(candidate, alias_path)
+        print(f"已更新当前使用模型别名: {alias_path}")
+
+        # 保存当前 data.yaml 快照到同一目录
+        try:
+            yaml_target = trained_dir / f"data_kitchen_mixed_stratified_{suffix}.yaml"
+            shutil.copy(data_yaml, yaml_target)
+            print(f"已复制数据配置到: {yaml_target}")
+        except Exception as e:
+            print(f"[WARN] 复制 data.yaml 失败: {e}")
     
     return results, metrics
 

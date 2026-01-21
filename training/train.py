@@ -21,10 +21,10 @@ os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 # 训练配置
 TRAIN_CONFIGS = {
     'cls4': {
-        'data_yaml': 'data/datasets/kitchen_mixed/data.yaml',
+        'data_yaml': 'data/datasets/kitchen_mixed_stratified/data.yaml',
         'base_model': 'yolov8n.pt',
         'name_prefix': 'kitchen_mixed_4cls',
-        'description': '4类混合垃圾分类（厨余/可回收/有害/其他）',
+        'description': '4类混合垃圾分类（厨余/可回收/有害/其他，分层抽样版本）',
     },
     'cls5': {
         'data_yaml': 'data/datasets/kitchen_garbage/data.yaml',
@@ -45,10 +45,10 @@ TRAIN_CONFIGS = {
         'description': '40类精细化垃圾分类',
     },
     'mixed': {
-        'data_yaml': 'data/datasets/kitchen_mixed/data.yaml',
+        'data_yaml': 'data/datasets/kitchen_mixed_stratified/data.yaml',
         'base_model': 'yolov8s.pt',
         'name_prefix': 'kitchen_mixed',
-        'description': '混合数据集训练（TU Wien + 医疗废物 + TACO）',
+        'description': '混合数据集训练（TU Wien + 医疗废物 + TACO，分层抽样版本）',
     },
 }
 
@@ -164,26 +164,71 @@ def train_model(mode: str = 'cls23', epochs: int = 100, batch: int = 16,
     print(f"\n训练完成！")
     print(f"最佳模型保存在: {output_dir / 'weights' / 'best.pt'}")
     
-    # 自动复制模型到 models 目录
-    model_dst_name = {
-        'cls4': 'best_4cls.pt',
-        'cls5': 'best_5cls.pt',
-        'cls23': 'best_23cls.pt',
-        'cls40': 'best_40cls.pt',
-        'mixed': 'best_mixed.pt',
-    }.get(mode, 'best.pt')
-    
+    # 自动复制模型到 data/models/trained，带日期和可选版本号
+    from datetime import datetime
+    import shutil
+
+    today = datetime.now().strftime("%Y%m%d")
+
+    # 根据训练模式选择命名前缀
+    prefix_map = {
+        'cls4': 'best_kitchen_mixed_stratified',
+        'cls5': 'best_5cls',
+        'cls23': 'best_23cls',
+        'cls40': 'best_40cls',
+        'mixed': 'best_kitchen_mixed_stratified',
+    }
+    model_prefix = prefix_map.get(mode, 'best')
+
+    trained_dir = PROJECT_ROOT / 'data' / 'models' / 'trained'
+    trained_dir.mkdir(parents=True, exist_ok=True)
+
+    # 确定不与现有文件冲突的后缀（日期 + 可选版本号）
+    suffix = today
     best_model_src = output_dir / 'weights' / 'best.pt'
-    best_model_dst = PROJECT_ROOT / 'data' / 'models' / 'trained' / model_dst_name
-    
+    candidate = trained_dir / f"{model_prefix}_{suffix}.pt"
+    version = 1
+    while candidate.exists():
+        suffix = f"{today}_v{version}"
+        candidate = trained_dir / f"{model_prefix}_{suffix}.pt"
+        version += 1
+
     if best_model_src.exists():
-        import shutil
-        best_model_dst.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy(best_model_src, best_model_dst)
-        print(f"已自动复制模型到: {best_model_dst}")
+        shutil.copy(best_model_src, candidate)
+        print(f"已自动复制模型到: {candidate}")
+
+        # 兼容旧路径：更新无日期别名（供 UI / 配置使用）
+        alias_map = {
+            'cls4': 'best_4cls.pt',
+            'cls5': 'best_5cls.pt',
+            'cls23': 'best_23cls.pt',
+            'cls40': 'best_40cls.pt',
+            'mixed': 'best_mixed.pt',
+        }
+        alias_name = alias_map.get(mode)
+        if alias_name:
+            alias_path = trained_dir / alias_name
+            shutil.copy(candidate, alias_path)
+            print(f"已更新当前使用模型别名: {alias_path}")
+
+        # 同步保存当前 data.yaml 配置到同一目录，便于推理时使用
+        try:
+            data_prefix_map = {
+                'cls4': 'data_kitchen_mixed_stratified',
+                'cls5': 'data_5cls',
+                'cls23': 'data_23cls',
+                'cls40': 'data_40cls',
+                'mixed': 'data_kitchen_mixed_stratified',
+            }
+            data_prefix = data_prefix_map.get(mode, 'data')
+            yaml_target = trained_dir / f"{data_prefix}_{suffix}.yaml"
+            shutil.copy(data_yaml, yaml_target)
+            print(f"已复制数据配置到: {yaml_target}")
+        except Exception as e:
+            print(f"[WARN] 复制 data.yaml 失败: {e}")
     else:
         print(f"\n请执行以下命令复制模型:")
-        print(f"copy \"{best_model_src}\" \"{best_model_dst}\"")
+        print(f"copy \"{best_model_src}\" \"{trained_dir / (model_prefix + '_' + today + '.pt')}\"")
 
 
 def main():
