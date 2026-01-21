@@ -29,7 +29,7 @@ from UIProgram.UiMain import Ui_MainWindow
 
 
 class VideoThread(QThread):
-    """视频处理线程"""
+    """视频处理线程 - 优化版，防止卡死"""
     frame_ready = pyqtSignal(object, object)  # (帧图像, 检测结果)
     finished_signal = pyqtSignal()
     
@@ -39,10 +39,14 @@ class VideoThread(QThread):
         self.source = None
         self.running = False
         self.is_camera = False
+        self.frame_skip = 3  # 跳帧数：每N帧检测一次
+        self.last_result = None  # 缓存上次检测结果
     
     def set_source(self, source, is_camera: bool = False):
         self.source = source
         self.is_camera = is_camera
+        # 摄像头模式跳更多帧
+        self.frame_skip = 5 if is_camera else 2
     
     def run(self):
         if self.source is None:
@@ -54,21 +58,35 @@ class VideoThread(QThread):
             return
         
         self.running = True
+        frame_count = 0
         
         while self.running and cap.isOpened():
             ret, frame = cap.read()
             if not ret:
                 break
             
-            # 执行检测
-            result = self.detection_service.detect(frame)
-            plotted_frame = result.get_plotted_image()
+            frame_count += 1
             
-            self.frame_ready.emit(plotted_frame, result)
+            # 跳帧检测：只有每N帧才执行检测
+            if frame_count % self.frame_skip == 0:
+                try:
+                    result = self.detection_service.detect(frame)
+                    self.last_result = result
+                    plotted_frame = result.get_plotted_image()
+                    self.frame_ready.emit(plotted_frame, result)
+                except Exception as e:
+                    print(f"[WARNING] 检测异常: {e}")
+            else:
+                # 非检测帧：显示原始画面或上次结果
+                if self.last_result is not None:
+                    # 可选：显示上次检测结果的标注
+                    pass
             
-            # 控制帧率
-            if not self.is_camera:
-                self.msleep(33)  # 约30fps
+            # 强制帧率控制
+            if self.is_camera:
+                self.msleep(100)  # 摄像头100ms间隔
+            else:
+                self.msleep(33)   # 视频33ms间隔
         
         cap.release()
         self.finished_signal.emit()

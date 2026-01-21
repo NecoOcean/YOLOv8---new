@@ -17,7 +17,7 @@ class VoiceService:
     def __init__(self):
         self.engine = None
         self.enabled = True
-        self.announcement_interval = 2.0  # 每2秒最多播报一次
+        self.announcement_interval = 4.0  # 每4秒最多播报一次（摄像头模式更友好）
         self.last_announcement_time = 0
         self.last_announced_categories = set()
         
@@ -134,6 +134,19 @@ class VoiceService:
         """检查是否启用语音播报"""
         return self.enabled and self.engine is not None
     
+    def _clear_queue(self):
+        """清空语音消息队列"""
+        cleared_count = 0
+        while not self.message_queue.empty():
+            try:
+                self.message_queue.get_nowait()
+                self.message_queue.task_done()
+                cleared_count += 1
+            except queue.Empty:
+                break
+        if cleared_count > 0:
+            print(f"[DEBUG] 队列已清空 {cleared_count} 条消息")
+    
     def announce_detection(self, detection_result, announce_all: bool = False):
         """
         播报检测结果
@@ -142,7 +155,12 @@ class VoiceService:
             detection_result: 检测结果对象
             announce_all: 是否播报所有检测到的物品（默认只播报分类）
         """
-        if not self.is_enabled() or not detection_result.has_detections:
+        if not self.is_enabled():
+            return
+        
+        # 如果没有检测到垃圾，清空队列并返回
+        if not detection_result.has_detections:
+            self._clear_queue()
             return
         
         # 防止频繁播报（时间间隔控制）
@@ -170,7 +188,20 @@ class VoiceService:
         announcement_text = self._generate_announcement(category_items, announce_all)
         
         # 将消息放入队列，由工作线程处理
+        # 关键优化：先清空队列中的旧消息，只播报最新结果
         if announcement_text:
+            # 清空队列中的旧消息（防止堆积）
+            cleared_count = 0
+            while not self.message_queue.empty():
+                try:
+                    self.message_queue.get_nowait()
+                    self.message_queue.task_done()
+                    cleared_count += 1
+                except queue.Empty:
+                    break
+            if cleared_count > 0:
+                print(f"[DEBUG] 已清空 {cleared_count} 条旧语音消息")
+            
             try:
                 self.message_queue.put(announcement_text, block=False)
                 print(f"[DEBUG] 语音消息已加入队列: {announcement_text[:30]}...")

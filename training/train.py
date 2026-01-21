@@ -20,6 +20,12 @@ os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 # 训练配置
 TRAIN_CONFIGS = {
+    'cls4': {
+        'data_yaml': 'data/datasets/kitchen_mixed/data.yaml',
+        'base_model': 'yolov8n.pt',
+        'name_prefix': 'kitchen_mixed_4cls',
+        'description': '4类混合垃圾分类（厨余/可回收/有害/其他）',
+    },
     'cls5': {
         'data_yaml': 'data/datasets/kitchen_garbage/data.yaml',
         'base_model': 'yolov8n.pt',
@@ -37,6 +43,12 @@ TRAIN_CONFIGS = {
         'base_model': 'yolov8s.pt',
         'name_prefix': 'garbage_40cls',
         'description': '40类精细化垃圾分类',
+    },
+    'mixed': {
+        'data_yaml': 'data/datasets/kitchen_mixed/data.yaml',
+        'base_model': 'yolov8s.pt',
+        'name_prefix': 'kitchen_mixed',
+        'description': '混合数据集训练（TU Wien + 医疗废物 + TACO）',
     },
 }
 
@@ -154,9 +166,11 @@ def train_model(mode: str = 'cls23', epochs: int = 100, batch: int = 16,
     
     # 自动复制模型到 models 目录
     model_dst_name = {
+        'cls4': 'best_4cls.pt',
         'cls5': 'best_5cls.pt',
         'cls23': 'best_23cls.pt',
         'cls40': 'best_40cls.pt',
+        'mixed': 'best_mixed.pt',
     }.get(mode, 'best.pt')
     
     best_model_src = output_dir / 'weights' / 'best.pt'
@@ -175,8 +189,8 @@ def train_model(mode: str = 'cls23', epochs: int = 100, batch: int = 16,
 def main():
     parser = argparse.ArgumentParser(description='垃圾检测模型训练 - 统一入口')
     parser.add_argument('--mode', type=str, default='cls23', 
-                        choices=['cls5', 'cls23', 'cls40'],
-                        help='训练模式: cls5(5类), cls23(23类,默认), cls40(40类)')
+                        choices=['cls4', 'cls5', 'cls23', 'cls40', 'mixed'],
+                        help='训练模式: cls4(4类混合), cls5(5类), cls23(23类,默认), cls40(40类), mixed(混合数据集)')
     parser.add_argument('--epochs', type=int, default=100, help='训练轮次 (默认100)')
     parser.add_argument('--batch', type=int, default=64, help='批次大小 (默认64)')
     parser.add_argument('--device', type=str, default='0', help='设备: 0/1/cpu')
