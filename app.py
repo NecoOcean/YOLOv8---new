@@ -20,6 +20,7 @@ from PyQt5.QtGui import QIcon
 from src.config import settings
 from src.core.detection_service import DetectionService, DetectionResult
 from src.core.statistics_manager import StatisticsManager
+from src.core.voice_service import VoiceService
 from src.ui.ui_manager import UIManager
 from src.utils.file_handler import FileHandler
 
@@ -125,6 +126,9 @@ class MainWindow(QMainWindow):
         
         # 统计管理器
         self.statistics_manager = StatisticsManager()
+        
+        # 语音服务
+        self.voice_service = VoiceService()
     
     def _connect_signals(self):
         """连接信号槽"""
@@ -142,6 +146,10 @@ class MainWindow(QMainWindow):
         if hasattr(self.ui, 'clearBtn'):
             self.ui.clearBtn.clicked.connect(self.on_clear_statistics)
         
+        # 语音播报复选框
+        if hasattr(self.ui, 'voiceCheckBox'):
+            self.ui.voiceCheckBox.stateChanged.connect(self.on_voice_toggle)
+        
         # 配置切换菜单
         if hasattr(self.ui, 'actionConfig5'):
             self.ui.actionConfig5.triggered.connect(lambda: self.on_switch_config('cls5'))
@@ -156,6 +164,8 @@ class MainWindow(QMainWindow):
         )
         
         if file_path and self.detection_service:
+            # 重置语音缓存
+            self.voice_service.reset_announcement_cache()
             self.current_image_path = file_path
             self._detect_image(file_path)
     
@@ -167,6 +177,8 @@ class MainWindow(QMainWindow):
             self.image_list = FileHandler.get_images_from_directory(folder_path)
             if self.image_list:
                 self.current_image_index = 0
+                # 重置语音缓存
+                self.voice_service.reset_announcement_cache()
                 self._detect_image(self.image_list[0])
                 self.ui_manager.set_status(
                     self.ui.statusLabel, 
@@ -209,6 +221,9 @@ class MainWindow(QMainWindow):
         self.is_camera_running = False
         self.ui.CapBtn.setText("开启摄像头")
         self.ui_manager.set_status(self.ui.statusLabel, "已停止")
+        
+        # 重置语音播报缓存
+        self.voice_service.reset_announcement_cache()
     
     def _detect_image(self, image_path: str):
         """检测图片"""
@@ -235,6 +250,10 @@ class MainWindow(QMainWindow):
         # 显示分类指导
         guides = self.current_result.get_classification_guide()
         self.ui_manager.show_classification_guide(self.ui.guideLabel, guides)
+        
+        # 语音播报
+        if self.voice_service.is_enabled():
+            self.voice_service.announce_detection(self.current_result)
         
         # 记录统计
         if self.current_result.has_detections:
@@ -269,6 +288,10 @@ class MainWindow(QMainWindow):
         )
         guides = result.get_classification_guide()
         self.ui_manager.show_classification_guide(self.ui.guideLabel, guides)
+        
+        # 语音播报（视频模式下有防频繁机制）
+        if self.voice_service.is_enabled():
+            self.voice_service.announce_detection(result)
     
     def _on_video_finished(self):
         """视频处理完成"""
@@ -300,6 +323,13 @@ class MainWindow(QMainWindow):
             self._update_statistics_display()
             QMessageBox.information(self, "提示", "统计记录已清空")
     
+    def on_voice_toggle(self, state):
+        """切换语音播报"""
+        enabled = state == 2  # Qt.Checked
+        self.voice_service.set_enabled(enabled)
+        status = "已启用" if enabled else "已禁用"
+        self.ui_manager.set_status(self.ui.statusLabel, f"语音播报{status}")
+    
     def keyPressEvent(self, event):
         """键盘事件"""
         if event.key() == Qt.Key_Escape:
@@ -313,6 +343,8 @@ class MainWindow(QMainWindow):
         """上一张图片"""
         if self.image_list and self.current_image_index > 0:
             self.current_image_index -= 1
+            # 重置语音缓存，保证每张图片都播报
+            self.voice_service.reset_announcement_cache()
             self._detect_image(self.image_list[self.current_image_index])
             self._update_image_status()
     
@@ -320,6 +352,8 @@ class MainWindow(QMainWindow):
         """下一张图片"""
         if self.image_list and self.current_image_index < len(self.image_list) - 1:
             self.current_image_index += 1
+            # 重置语音缓存，保证每张图片都播报
+            self.voice_service.reset_announcement_cache()
             self._detect_image(self.image_list[self.current_image_index])
             self._update_image_status()
     
@@ -333,6 +367,8 @@ class MainWindow(QMainWindow):
     def closeEvent(self, event):
         """关闭事件"""
         self.on_stop()
+        # 停止语音服务
+        self.voice_service.stop()
         event.accept()
     
     def _update_config_menu_state(self):

@@ -90,6 +90,12 @@ class Ui_MainWindow(object):
         self.StopBtn.setEnabled(False)
         self.controlLayout.addWidget(self.StopBtn, 2, 1)
         
+        # 语音播报控制
+        self.voiceCheckBox = QtWidgets.QCheckBox("🔊 启用语音播报")
+        self.voiceCheckBox.setChecked(True)
+        self.voiceCheckBox.setStyleSheet("font-size: 13px; padding: 5px;")
+        self.controlLayout.addWidget(self.voiceCheckBox, 3, 0, 1, 2)
+        
         self.rightLayout.addWidget(self.controlGroup)
         
         # 检测信息组
