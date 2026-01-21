@@ -31,12 +31,12 @@ MODEL_5CLS_PATH = MODELS_DIR / 'trained' / 'best_5cls.pt'
 MODEL_23CLS_PATH = MODELS_DIR / 'trained' / 'best_23cls.pt'
 MODEL_40CLS_PATH = MODELS_DIR / 'trained' / 'best_40cls.pt'
 
-# 当前使用的模型（默认5类）
-CURRENT_MODEL_PATH = MODEL_5CLS_PATH
+# 当前使用的模型（默认23类）
+CURRENT_MODEL_PATH = MODEL_23CLS_PATH
 
 # ============ 当前配置模式 ============
-# 'cls5' 或 'cls40'
-CURRENT_MODE = 'cls5'
+# 'cls5', 'cls23' 或 'cls40'
+CURRENT_MODE = 'cls23'
 
 # ============ 5类配置 ============
 CONFIG_5CLS = {
