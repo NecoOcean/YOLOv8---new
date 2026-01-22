@@ -214,18 +214,13 @@ class Ui_MainWindow(object):
         self.actionExit.setShortcut("Ctrl+Q")
         
         # 菜单动作 - 配置切换
-        self.actionConfig5 = QtWidgets.QAction("5类配置 (简化版)", MainWindow)
-        self.actionConfig5.setCheckable(True)
-        self.actionConfig23 = QtWidgets.QAction("23类配置 (标准版)", MainWindow)
-        self.actionConfig23.setCheckable(True)
-        self.actionConfig40 = QtWidgets.QAction("40类配置 (精细版)", MainWindow)
-        self.actionConfig40.setCheckable(True)
+        self.actionConfig4 = QtWidgets.QAction("4类配置 (分层抽样版)", MainWindow)
+        self.actionConfig4.setCheckable(True)
+        self.actionConfig4.setChecked(True)
         
         # 配置互斥组
         self.configActionGroup = QtWidgets.QActionGroup(MainWindow)
-        self.configActionGroup.addAction(self.actionConfig5)
-        self.configActionGroup.addAction(self.actionConfig23)
-        self.configActionGroup.addAction(self.actionConfig40)
+        self.configActionGroup.addAction(self.actionConfig4)
         self.configActionGroup.setExclusive(True)
         
         # 菜单动作 - 帮助
@@ -236,9 +231,7 @@ class Ui_MainWindow(object):
         self.menuFile.addSeparator()
         self.menuFile.addAction(self.actionExit)
         
-        self.menuConfig.addAction(self.actionConfig5)
-        self.menuConfig.addAction(self.actionConfig23)
-        self.menuConfig.addAction(self.actionConfig40)
+        self.menuConfig.addAction(self.actionConfig4)
         
         self.menuHelp.addAction(self.actionAbout)
         

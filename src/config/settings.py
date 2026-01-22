@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 基于YOLOv8的垃圾目标检测系统 - 统一配置管理
-支持5类和40类配置动态切换
+当前默认支持4类混合垃圾分类模型（分层抽样版本）
 """
 import os
 from pathlib import Path
@@ -26,17 +26,18 @@ EXPORTS_DIR = OUTPUT_DIR / 'exports'
 # 预训练模型
 PRETRAINED_MODEL_PATH = MODELS_DIR / 'pretrained' / 'yolov8n.pt'
 
-# 训练后模型
+# 4类训练后模型路径
 MODEL_4CLS_PATH = MODELS_DIR / 'trained' / 'best_kitchen_mixed_stratified_20260122.pt'
 
-# 当前使用的模型（固定为4类）
+# 当前配置模式 (默认4类)
+CURRENT_MODE = 'cls4'
 CURRENT_MODEL_PATH = MODEL_4CLS_PATH
 
-# ============ 当前配置模式 ============
-CURRENT_MODE = 'cls4'
+# ============ 配置定义 ============
 
-# ============ 4类配置 ============
+# 4类配置 (Kitchen Mixed Stratified)
 CONFIG_4CLS = {
+    'id': 'cls4',
     'NUM_CLASSES': 4,
     'names': {
         0: 'kitchen_waste',
@@ -53,23 +54,32 @@ CONFIG_4CLS = {
     },
     'model_path': MODEL_4CLS_PATH,
     'data_yaml': DATASETS_DIR / 'kitchen_mixed_stratified' / 'data.yaml',
-    'description': '4类混合垃圾分类模型（kitchen_mixed_stratified 分层抽样版本）',
+    'description': '4类混合垃圾分类模型（分层抽样优化版）',
 }
 
-# ============ 当前配置获取 ============
+# ============ 配置注册表 (支持未来扩展) ============
+# 后续添加新配置只需在此定义并注册即可
+CONFIG_REGISTRY = {
+    'cls4': CONFIG_4CLS,
+}
 
 def get_current_config():
-    """获取当前配置（仅支持4类）"""
-    return CONFIG_4CLS
+    """获取当前激活模式的配置字典"""
+    return CONFIG_REGISTRY.get(CURRENT_MODE, CONFIG_4CLS)
 
 
 def set_mode(mode: str):
-    """设置配置模式（已锁定为cls4）"""
+    """切换系统配置模式"""
     global CURRENT_MODE, CURRENT_MODEL_PATH
-    CURRENT_MODE = 'cls4'
-    CURRENT_MODEL_PATH = MODEL_4CLS_PATH
+    if mode in CONFIG_REGISTRY:
+        CURRENT_MODE = mode
+        CURRENT_MODEL_PATH = CONFIG_REGISTRY[mode]['model_path']
+    else:
+        # 默认回退
+        CURRENT_MODE = 'cls4'
+        CURRENT_MODEL_PATH = MODEL_4CLS_PATH
 
-# 导出当前配置变量（向后兼容）
+# 导出当前配置变量（向后兼容旧代码）
 _config = get_current_config()
 NUM_CLASSES = _config['NUM_CLASSES']
 names = _config['names']
@@ -78,7 +88,7 @@ classification_guide = _config['classification_guide']
 model_path = str(_config['model_path'])
 save_path = str(DETECTIONS_DIR)
 
-# ============ 四大类颜色 ============
+# ============ 视觉外观配置 ============
 CATEGORY_COLORS = {
     '厨余垃圾': '#4CAF50',  # 绿色
     '可回收物': '#2196F3',  # 蓝色

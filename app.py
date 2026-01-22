@@ -105,6 +105,10 @@ class MainWindow(QMainWindow):
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
         
+        # 允许主窗口获取焦点以捕获键盘事件
+        self.setFocusPolicy(Qt.StrongFocus)
+        self.setFocus()
+        
         # 初始化核心组件
         self._init_components()
         
@@ -168,13 +172,16 @@ class MainWindow(QMainWindow):
         if hasattr(self.ui, 'voiceCheckBox'):
             self.ui.voiceCheckBox.stateChanged.connect(self.on_voice_toggle)
         
-        # 配置切换菜单
+        # 配置切换菜单 (使用注册表动态绑定)
         if hasattr(self.ui, 'actionConfig4'):
             self.ui.actionConfig4.triggered.connect(lambda: self.on_switch_config('cls4'))
-        if hasattr(self.ui, 'actionConfig5'):
-            self.ui.actionConfig5.triggered.connect(lambda: self.on_switch_config('cls5'))
-            self.ui.actionConfig23.triggered.connect(lambda: self.on_switch_config('cls23'))
-            self.ui.actionConfig40.triggered.connect(lambda: self.on_switch_config('cls40'))
+        
+        # 预留：如果未来增加了更多配置，可以在此处继续绑定
+        # for mode_id in settings.CONFIG_REGISTRY:
+        #     if hasattr(self.ui, f'actionConfig_{mode_id}'):
+        #         getattr(self.ui, f'actionConfig_{mode_id}').triggered.connect(
+        #             lambda m=mode_id: self.on_switch_config(m)
+        #         )
     
     def on_open_image(self):
         """打开图片"""
@@ -204,6 +211,8 @@ class MainWindow(QMainWindow):
                     self.ui.statusLabel, 
                     f"已加载 {len(self.image_list)} 张图片 (1/{len(self.image_list)})"
                 )
+                # 关键：加载后强制获取焦点，确保方向键可用
+                self.setFocus()
     
     def on_open_video(self):
         """打开视频"""
@@ -351,13 +360,20 @@ class MainWindow(QMainWindow):
         self.ui_manager.set_status(self.ui.statusLabel, f"语音播报{status}")
     
     def keyPressEvent(self, event):
-        """键盘事件"""
-        if event.key() == Qt.Key_Escape:
+        """键盘事件 - 增强版"""
+        key = event.key()
+        if key == Qt.Key_Escape:
             self.on_stop()
-        elif event.key() == Qt.Key_Left and self.image_list:
-            self._prev_image()
-        elif event.key() == Qt.Key_Right and self.image_list:
-            self._next_image()
+        elif key == Qt.Key_Left:
+            if self.image_list:
+                self._prev_image()
+                event.accept()
+        elif key == Qt.Key_Right:
+            if self.image_list:
+                self._next_image()
+                event.accept()
+        else:
+            super().keyPressEvent(event)
     
     def _prev_image(self):
         """上一张图片"""
@@ -397,12 +413,6 @@ class MainWindow(QMainWindow):
         
         if hasattr(self.ui, 'actionConfig4'):
             self.ui.actionConfig4.setChecked(current_mode == 'cls4')
-        if hasattr(self.ui, 'actionConfig5'):
-            self.ui.actionConfig5.setChecked(current_mode == 'cls5')
-        if hasattr(self.ui, 'actionConfig23'):
-            self.ui.actionConfig23.setChecked(current_mode == 'cls23')
-        if hasattr(self.ui, 'actionConfig40'):
-            self.ui.actionConfig40.setChecked(current_mode == 'cls40')
         
         # 更新窗口标题显示当前配置
         config = settings.get_current_config()
@@ -413,47 +423,35 @@ class MainWindow(QMainWindow):
         # 停止当前视频/摄像头
         self.on_stop()
         
-        # 获取配置信息
-        config_names = {
-            'cls4': ('4类配置', settings.MODEL_4CLS_PATH),
-            'cls5': ('5类配置', settings.MODEL_5CLS_PATH),
-            'cls23': ('23类配置', settings.MODEL_23CLS_PATH),
-            'cls40': ('40类配置', settings.MODEL_40CLS_PATH),
-        }
-        config_name, model_path = config_names.get(mode, ('未知', None))
+        # 从注册表获取配置
+        registry = settings.CONFIG_REGISTRY
+        if mode not in registry:
+            QMessageBox.warning(self, "错误", f"不支持的配置模式: {mode}")
+            self._update_config_menu_state()
+            return
+            
+        config = registry[mode]
+        model_path = config['model_path']
         
         # 检查模型是否存在
-        if model_path and not Path(model_path).exists():
-            reply = QMessageBox.warning(
+        if not Path(model_path).exists():
+            QMessageBox.warning(
                 self, "模型不存在",
-                f"未找到 {config_name} 的模型文件:\n{model_path}\n\n"
-                "是否仍然切换配置？（将使用默认模型）",
-                QMessageBox.Yes | QMessageBox.No,
-                QMessageBox.No
+                f"未找到该模式的模型文件:\n{model_path}\n\n请检查路径配置。"
             )
-            if reply == QMessageBox.No:
-                self._update_config_menu_state()
-                return
+            self._update_config_menu_state()
+            return
         
         # 切换配置
         settings.set_mode(mode)
         
         # 重新加载模型
         try:
-            model_path_str = str(settings.CURRENT_MODEL_PATH)
-            if Path(model_path_str).exists():
-                self.detection_service = DetectionService(model_path_str)
-                self.ui_manager.set_status(
-                    self.ui.statusLabel,
-                    f"已切换到 {config_name}，模型加载成功"
-                )
-            else:
-                # 模型不存在，仅切换配置
-                self.detection_service = None
-                self.ui_manager.set_status(
-                    self.ui.statusLabel,
-                    f"已切换到 {config_name}，等待模型文件"
-                )
+            self.detection_service = DetectionService(str(settings.CURRENT_MODEL_PATH))
+            self.ui_manager.set_status(
+                self.ui.statusLabel,
+                f"已切换到 {config.get('description', mode)}，模型加载成功"
+            )
         except Exception as e:
             QMessageBox.critical(self, "错误", f"模型加载失败: {e}")
             self.detection_service = None
@@ -462,12 +460,11 @@ class MainWindow(QMainWindow):
         self._update_config_menu_state()
         
         # 提示用户
-        config = settings.get_current_config()
         QMessageBox.information(
             self, "配置已切换",
-            f"已切换到 {config_name}\n"
+            f"已成功切换到: {mode}\n"
             f"类别数量: {config['NUM_CLASSES']}\n"
-            f"模型路径: {config['model_path']}"
+            f"描述: {config.get('description', '无')}"
         )
 
 

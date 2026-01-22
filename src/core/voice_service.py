@@ -17,12 +17,15 @@ class VoiceService:
     def __init__(self):
         self.engine = None
         self.enabled = True
-        self.announcement_interval = 4.0  # 每4秒最多播报一次（摄像头模式更友好）
+        self.announcement_interval = 2.0  # 基础间隔：发现新物品时的最短间隔
+        self.repeat_interval = 15.0       # 重复间隔：相同物品在视频模式下的播报冷却
         self.last_announcement_time = 0
         self.last_announced_categories = set()
+        self.last_announced_text = ""
         
-        # 创建消息队列和工作线程
+        # 消息队列和工作线程
         self.message_queue = queue.Queue()
+        self.interrupt_event = threading.Event() # 用于中断当前播报
         self.worker_thread = None
         self.running = False
         self.engine_ready = threading.Event()  # 用于同步 engine 初始化
@@ -80,7 +83,6 @@ class VoiceService:
     
     def _worker_loop(self):
         """工作线程主循环 - 处理所有语音播报请求"""
-        # 关键修复：在工作线程中初始化 engine
         self._init_engine()
         
         if not self.engine:
@@ -91,30 +93,61 @@ class VoiceService:
         
         while self.running:
             try:
-                # 从队列获取消息，超时0.5秒则继续循环
-                text = self.message_queue.get(timeout=0.5)
+                # 1. 优先检查中断信号
+                if self.interrupt_event.is_set():
+                    self.interrupt_event.clear()
+                    self._reinit_engine()
+                    print("[DEBUG] 工作线程响应中断，引擎已重置")
+
+                # 2. 从队列获取消息（缩短超时以提高响应灵敏度）
+                try:
+                    text = self.message_queue.get(timeout=0.1)
+                except queue.Empty:
+                    continue
                 
-                if text is None:  # None 是停止信号
+                if text is None:  # 停止信号
                     break
                 
-                # 执行语音播报
+                # 3. 再次检查中断（防止在等待队列时发生了中断）
+                if self.interrupt_event.is_set():
+                    self.message_queue.task_done()
+                    continue
+
+                # 4. 执行语音播报
                 try:
-                    print(f"[VOICE] {text}")
                     if self.engine and self.enabled:
+                        print(f"[VOICE] 播报中: {text}")
                         self.engine.say(text)
-                        self.engine.runAndWait()
-                        print(f"[DEBUG] 播报完成: {text[:30]}...")
-                        # 关键修复：每次播报后重新初始化引擎
-                        # 彻底解决 Windows SAPI5 COM 对象状态问题
-                        self._reinit_engine()
+                        
+                        # 核心优化：使用非阻塞循环播放，允许在播放过程中即时中断
+                        try:
+                            self.engine.startLoop(False)
+                            while self.running and not self.interrupt_event.is_set():
+                                self.engine.iterate()
+                                # 如果引擎不再忙碌（播放完成），则退出循环
+                                if not hasattr(self.engine, 'isBusy') or not self.engine.isBusy():
+                                    break
+                                time.sleep(0.02)  # 50Hz 采样检查中断信号
+                        finally:
+                            # 无论如何都要尝试关闭当前循环
+                            try:
+                                self.engine.endLoop()
+                            except:
+                                pass
+
+                        # 如果是因为中断跳出循环，强制停止引擎并重置
+                        if self.interrupt_event.is_set():
+                            print("[DEBUG] 检测到中断信号，强制停止当前播报")
+                            try:
+                                self.engine.stop()
+                            except:
+                                pass
+                            self._reinit_engine()
+                            self.interrupt_event.clear()
                 except Exception as e:
-                    print(f"[WARNING] 语音播报失败: {e}")
-                    import traceback
-                    traceback.print_exc()
-                    # 尝试重新初始化引擎
+                    print(f"[WARNING] 语音播报异常: {e}")
                     self._reinit_engine()
                 
-                # 标记任务完成
                 self.message_queue.task_done()
                 
             except queue.Empty:
@@ -149,64 +182,57 @@ class VoiceService:
     
     def announce_detection(self, detection_result, announce_all: bool = False):
         """
-        播报检测结果
-        
-        Args:
-            detection_result: 检测结果对象
-            announce_all: 是否播报所有检测到的物品（默认只播报分类）
+        播报检测结果（带智能防重复和间隔控制）
         """
         if not self.is_enabled():
             return
         
-        # 如果没有检测到垃圾，清空队列并返回
+        # 如果没有检测到垃圾
         if not detection_result.has_detections:
-            self._clear_queue()
             return
         
-        # 防止频繁播报（时间间隔控制）
-        current_time = time.time()
-        if current_time - self.last_announcement_time < self.announcement_interval:
-            print(f"[DEBUG] 播报被间隔限制，距上次 {current_time - self.last_announcement_time:.1f}秒")
-            return
-        
-        # 获取分类指导信息
+        # 获取当前检测到的类别
         guides = detection_result.get_classification_guide()
-        
-        # 按类别分组
         category_items = defaultdict(list)
         for guide in guides:
             category = guide.get('category', '未知')
             item_name = guide.get('name', '')
             category_items[category].append(item_name)
         
-        # 更新上次播报的类别和时间
         current_categories = set(category_items.keys())
-        self.last_announced_categories = current_categories
-        self.last_announcement_time = current_time
         
-        # 生成播报文本
+        # 1. 核心逻辑：判断是否为相同内容的重复播报
+        # 如果当前类别集与上次播报的类别集完全一致，视为“相同内容”
+        is_same_content = (current_categories == self.last_announced_categories)
+        
+        current_time = time.time()
+        
+        # 2. 动态调整冷却间隔
+        # 如果是相同内容（视频中的同一物体），冷却时间设为 repeat_interval (15s)
+        # 如果是不同内容（新垃圾出现），冷却时间设为基础间隔 (2s)
+        effective_interval = self.repeat_interval if is_same_content else self.announcement_interval
+        
+        if current_time - self.last_announcement_time < effective_interval:
+            # 冷却中，跳过
+            return
+        
+        # 3. 生成并播报文本
         announcement_text = self._generate_announcement(category_items, announce_all)
         
-        # 将消息放入队列，由工作线程处理
-        # 关键优化：先清空队列中的旧消息，只播报最新结果
         if announcement_text:
-            # 清空队列中的旧消息（防止堆积）
-            cleared_count = 0
-            while not self.message_queue.empty():
-                try:
-                    self.message_queue.get_nowait()
-                    self.message_queue.task_done()
-                    cleared_count += 1
-                except queue.Empty:
-                    break
-            if cleared_count > 0:
-                print(f"[DEBUG] 已清空 {cleared_count} 条旧语音消息")
+            # 更新状态
+            self.last_announced_categories = current_categories
+            self.last_announcement_time = current_time
+            self.last_announced_text = announcement_text
+            
+            # 清空队列，确保最新
+            self._clear_queue()
             
             try:
                 self.message_queue.put(announcement_text, block=False)
-                print(f"[DEBUG] 语音消息已加入队列: {announcement_text[:30]}...")
+                print(f"[DEBUG] 语音已入队 (冷却: {effective_interval}s): {announcement_text[:30]}...")
             except queue.Full:
-                print("[WARNING] 语音消息队列已满，跳过此次播报")
+                pass
     
     def _generate_announcement(self, category_items: dict, announce_all: bool) -> str:
         """
@@ -301,10 +327,16 @@ class VoiceService:
         self.announcement_interval = max(1.0, interval)
     
     def reset_announcement_cache(self):
-        """重置播报缓存（用于切换图片/视频时）"""
+        """重置播报缓存并尝试中断当前播报（用于切换图片/视频时）"""
         self.last_announced_categories = set()
-        # 设置为当前时间减去间隔，确保下次检测立即播报
-        self.last_announcement_time = time.time() - self.announcement_interval - 0.1
+        self.last_announced_text = ""
+        # 强制将时间设为 0，确保下次检测立即通过间隔检查
+        self.last_announcement_time = 0
+        # 设置中断标志
+        self.interrupt_event.set()
+        # 清空队列
+        self._clear_queue()
+        print("[DEBUG] 语音缓存已重置，中断已请求")
     
     def stop(self):
         """停止当前播报和工作线程"""
