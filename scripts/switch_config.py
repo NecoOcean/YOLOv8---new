@@ -33,6 +33,14 @@ def update_settings_file(mode: str):
         f.write(content)
 
 
+def switch_to_4cls():
+    """切换到4类配置"""
+    update_settings_file('cls4')
+    print("✅ 已切换到 4类配置")
+    print("   类别: 厨余垃圾, 可回收物, 有害垃圾, 其他垃圾")
+    print("   模型: data/models/trained/best_4cls.pt")
+
+
 def switch_to_5cls():
     """切换到5类配置"""
     update_settings_file('cls5')
@@ -84,6 +92,7 @@ def main():
     if len(sys.argv) < 2:
         show_current()
         print("\n使用方法:")
+        print("  python scripts/switch_config.py 4    # 切换到4类配置")
         print("  python scripts/switch_config.py 5    # 切换到5类配置")
         print("  python scripts/switch_config.py 23   # 切换到23类配置")
         print("  python scripts/switch_config.py 40   # 切换到40类配置")
@@ -92,7 +101,9 @@ def main():
     
     cmd = sys.argv[1].lower()
     
-    if cmd == '5' or cmd == 'cls5':
+    if cmd == '4' or cmd == 'cls4':
+        switch_to_4cls()
+    elif cmd == '5' or cmd == 'cls5':
         switch_to_5cls()
     elif cmd == '23' or cmd == 'cls23':
         switch_to_23cls()
@@ -102,7 +113,7 @@ def main():
         show_current()
     else:
         print(f"❌ 未知命令: {cmd}")
-        print("可用命令: 5, 23, 40, show")
+        print("可用命令: 4, 5, 23, 40, show")
 
 
 if __name__ == '__main__':

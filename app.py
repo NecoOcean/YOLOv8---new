@@ -169,6 +169,8 @@ class MainWindow(QMainWindow):
             self.ui.voiceCheckBox.stateChanged.connect(self.on_voice_toggle)
         
         # 配置切换菜单
+        if hasattr(self.ui, 'actionConfig4'):
+            self.ui.actionConfig4.triggered.connect(lambda: self.on_switch_config('cls4'))
         if hasattr(self.ui, 'actionConfig5'):
             self.ui.actionConfig5.triggered.connect(lambda: self.on_switch_config('cls5'))
             self.ui.actionConfig23.triggered.connect(lambda: self.on_switch_config('cls23'))
@@ -391,13 +393,16 @@ class MainWindow(QMainWindow):
     
     def _update_config_menu_state(self):
         """更新配置菜单选中状态"""
-        if not hasattr(self.ui, 'actionConfig5'):
-            return
-        
         current_mode = settings.CURRENT_MODE
-        self.ui.actionConfig5.setChecked(current_mode == 'cls5')
-        self.ui.actionConfig23.setChecked(current_mode == 'cls23')
-        self.ui.actionConfig40.setChecked(current_mode == 'cls40')
+        
+        if hasattr(self.ui, 'actionConfig4'):
+            self.ui.actionConfig4.setChecked(current_mode == 'cls4')
+        if hasattr(self.ui, 'actionConfig5'):
+            self.ui.actionConfig5.setChecked(current_mode == 'cls5')
+        if hasattr(self.ui, 'actionConfig23'):
+            self.ui.actionConfig23.setChecked(current_mode == 'cls23')
+        if hasattr(self.ui, 'actionConfig40'):
+            self.ui.actionConfig40.setChecked(current_mode == 'cls40')
         
         # 更新窗口标题显示当前配置
         config = settings.get_current_config()
@@ -410,6 +415,7 @@ class MainWindow(QMainWindow):
         
         # 获取配置信息
         config_names = {
+            'cls4': ('4类配置', settings.MODEL_4CLS_PATH),
             'cls5': ('5类配置', settings.MODEL_5CLS_PATH),
             'cls23': ('23类配置', settings.MODEL_23CLS_PATH),
             'cls40': ('40类配置', settings.MODEL_40CLS_PATH),

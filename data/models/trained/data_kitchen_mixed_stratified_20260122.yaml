@@ -1,0 +1,10 @@
+names:
+  0: kitchen_waste
+  1: recyclable
+  2: hazardous
+  3: other
+nc: 4
+path: data/datasets/kitchen_mixed_stratified
+test: images/test
+train: images/train
+val: images/val
