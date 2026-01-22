@@ -23,6 +23,7 @@ import os
 import sys
 from pathlib import Path
 from datetime import datetime
+import shutil
 import yaml
 
 # 添加项目根目录到路径
@@ -327,9 +328,6 @@ def train_kitchen_mixed(
     print(f"最新模型: {output_dir / 'weights' / 'last.pt'}")
     
     # 自动复制到 data/models/trained，按数据集命名规范
-    from datetime import datetime
-    import shutil
-
     best_model_src = output_dir / 'weights' / 'best.pt'
     trained_dir = PROJECT_ROOT / 'data' / 'models' / 'trained'
     trained_dir.mkdir(parents=True, exist_ok=True)

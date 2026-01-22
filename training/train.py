@@ -9,6 +9,7 @@ import os
 import sys
 from pathlib import Path
 from datetime import datetime
+import shutil
 
 # 添加项目根目录到路径（使用 resolve() 确保绝对路径）
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -165,9 +166,6 @@ def train_model(mode: str = 'cls23', epochs: int = 100, batch: int = 16,
     print(f"最佳模型保存在: {output_dir / 'weights' / 'best.pt'}")
     
     # 自动复制模型到 data/models/trained，带日期和可选版本号
-    from datetime import datetime
-    import shutil
-
     today = datetime.now().strftime("%Y%m%d")
 
     # 根据训练模式选择命名前缀
