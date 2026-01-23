@@ -1,146 +1,68 @@
-# 基于YOLOv8的垃圾目标检测系统
+# 基于YOLOv8的厨房垃圾目标检测系统
 
 ## 项目简介
 
-本项目是一个基于YOLOv8深度学习目标检测算法的智能垃圾分类识别系统，应用于智能家居场景（厨房环境），实现垃圾的自动识别与分类指导。
+本项目是一个基于YOLOv8深度学习目标检测算法的智能垃圾分类识别系统，应用于智能家居场景（厨房环境），实现垃圾的自动识别、分类指导以及语音提示。
 
-## 配置模式
+## 核心功能
 
-项目支持三种分类精度：
-
-| 模式 | 类别数 | 适用场景 |
-|------|--------|----------|
-| **简化版** | 5类 | 快速演示、轻量部署 |
-| **标准版** | 23类 | 厨房垃圾分类（推荐） |
-| **精细版** | 40类 | 完整功能、精确识别 |
-
-**切换命令**：
-```bash
-python scripts/switch_config.py 5    # 切换到5类配置
-python scripts/switch_config.py 23   # 切换到23类配置
-python scripts/switch_config.py 40   # 切换到40类配置
-```
-
-> 详细说明请参阅 `项目文件说明报告.md`
-
-## 功能特点
-
-- **图片检测**：单张图片垃圾识别
-- **批量检测**：文件夹批量处理
-- **视频检测**：视频文件逐帧检测
-- **摄像头检测**：实时画面检测
-- **分类指导**：显示垃圾分类建议（厨余/可回收/有害/其他）
-- **结果保存**：保存检测结果图片/视频
+- **多模态检测**：支持单张图片、文件夹批量、视频文件及摄像头实时检测。
+- **4类智能分类**：精准识别厨余垃圾、可回收物、有害垃圾及其他垃圾。
+- **语音播报**：集成智能语音提示，自动播报垃圾分类投放指导。
+- **统计管理**：自动记录检测历史，支持按日统计及数据导出（CSV）。
+- **模块化架构**：采用 src/ 目录结构的现代化 Python 项目架构，易于扩展。
 
 ## 技术栈
 
-- **深度学习框架**：Ultralytics YOLOv8
+- **深度学习**：Ultralytics YOLOv8
 - **GUI框架**：PyQt5
 - **图像处理**：OpenCV
-- **编程语言**：Python 3.8+
+- **语音合成**：pyttsx3
+- **编程语言**：Python 3.9+
+
+## 快速开始
+
+### 1. 环境准备
+
+```bash
+# 创建并激活虚拟环境
+conda create -n garbage_detect python=3.9
+conda activate garbage_detect
+
+# 安装依赖
+pip install -r requirements.txt
+```
+
+### 2. 运行程序
+
+```bash
+# 运行主应用程序 (重构版入口)
+python app.py
+```
 
 ## 项目结构
 
 ```
 YOLOv8/
-├── main.py                 # 主程序入口
-├── detection_service.py    # 检测服务模块
-├── ui_manager.py           # UI管理模块
-├── file_handler.py         # 文件处理模块
-├── statistics_manager.py   # 统计管理模块
-├── Config.py               # 当前使用的配置文件
-├── Config_kitchen.py       # 5类简化配置
-├── Config_40cls.py         # 40类精细化配置
-├── train.py                # 5类模型训练脚本
-├── train_40cls.py          # 40类模型训练脚本
-├── switch_config.py        # 配置切换工具
-├── requirements.txt        # 依赖列表
-├── UIProgram/              # UI界面模块
-│   ├── UiMain.py           # 主窗口UI定义
-│   ├── QssLoader.py        # 样式加载器
-│   └── style.css           # 样式表
-├── models/                 # 模型文件目录
-├── datasets/               # 数据集目录
-│   ├── data_40cls.yaml     # 40类数据集配置
-│   └── kitchen_garbage/    # 5类数据集配置
-├── save_data/              # 检测结果保存目录
-└── TestFiles/              # 测试文件目录
+├── app.py                  # 应用程序主入口
+├── src/                    # 源代码目录
+│   ├── config/             # 配置管理 (settings.py)
+│   ├── core/               # 核心逻辑 (检测服务、统计、语音)
+│   ├── ui/                 # UI管理及样式
+│   └── utils/              # 工具函数 (文件处理)
+├── data/                   # 数据资源目录
+│   ├── models/trained/     # 训练好的模型 (.pt)
+│   └── datasets/           # 数据集配置 (.yaml)
+├── output/                 # 输出目录 (检测结果、统计报表)
+└── training/               # 训练脚本目录
 ```
 
-## 安装步骤
+## 详细文档
 
-### 1. 创建虚拟环境
-
-```bash
-conda create -n garbage_detect python=3.9
-conda activate garbage_detect
-```
-
-### 2. 安装PyTorch（GPU版本）
-
-```bash
-# CUDA 11.8
-pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118
-```
-
-### 3. 安装项目依赖
-
-```bash
-pip install -r requirements.txt
-```
-
-## 使用方法
-
-### 训练模型
-
-```bash
-# 5类模型训练（简化版）
-python train.py
-# 训练完成后复制: runs/detect/kitchen_garbage_5cls/weights/best.pt -> models/best.pt
-
-# 40类模型训练（精细版）
-python train_40cls.py
-# 训练完成后复制: runs/detect/garbage_40cls/weights/best.pt -> models/best_40cls.pt
-```
-
-### 运行应用程序
-
-```bash
-python main.py
-```
-
-### 快捷键
-
-- `Ctrl+O`：打开图片
-- `Ctrl+Q`：退出程序
-- `←/→`：切换图片（批量模式）
-- `Esc`：停止视频/摄像头
-
-## 数据集
-
-项目包含两种数据集配置：
-
-### 5类简化版（kitchen_garbage）
-- 类别：果皮、茶叶渣、易拉罐、过期药品、其他垃圾
-- 配置文件：`datasets/kitchen_garbage/data.yaml`
-
-### 40类精细版
-- 类别：涵盖塑料、厨余、纸类、金属、玻璃等40种细分类别
-- 配置文件：`datasets/data_40cls.yaml`
-- 数据来源：原始40类标注数据（16,840张训练图片，1,776张验证图片）
-
-```
-datasets/
-├── images/
-│   ├── train/           # 训练集图片 (16,840张)
-│   └── val/             # 验证集图片 (1,776张)
-├── labels/
-│   ├── train/           # 训练集标注 (19,028个)
-│   └── val/             # 验证集标注
-├── data_40cls.yaml      # 40类数据集配置
-└── kitchen_garbage/     # 5类简化数据集
-    └── data.yaml
-```
+- [项目架构说明](docs/项目架构说明.md)
+- [操作手册](docs/操作手册.md)
+- [4类模型部署指南](docs/4类模型部署指南.md)
+- [语音播报功能说明](docs/语音播报功能说明.md)
 
 ## 许可证
 
